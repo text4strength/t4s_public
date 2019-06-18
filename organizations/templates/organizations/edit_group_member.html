@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block title %} {{headline}} {% endblock %}
+{% block extracss %}
+	<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/tabletools/2.2.4/css/dataTables.tableTools.css">
+    <link rel="stylesheet" href="{% static 'css/group.css' %}" type="text/css"/>
+{% endblock %}
+{% block extrajs %}
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+    <script src="{% static 'js/common.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+	<ol class="breadcrumb">
+	  <li><a href="/">Home</a></li>
+	  <li><a href="{% url 'organizations:list_group' %}">Manage Groups</a></li>
+	  <li class="active">Edit Group Membership</li>
+	</ol>
+
+	<div class="page-header">
+	  <h3>{{headline}}</h3>
+	</div>
+
+	<div id="container">
+		<div class="panel panel-primary" style="border-color: white;">
+			<div class="panel-heading">
+				<h3 class="panel-title">Table of current group members</h3>
+			</div>
+            <div class="alert alert-info" role="alert"><strong>Note: </strong>The download feature usually works best with Firefox browser.</div>
+			<div class="table-responsive">
+				<table aria-describedby="group_table_info" role="grid" id="group-table" class="table table-bordered dataTable">
+                    <thead>
+                        <tr role="row">
+                                <th aria-label="Member Phone Number: activate to sort column by descending order" aria-sort="ascending" aria-controls="group-table" tabindex="0" class="sorting_asc info">
+                                    {% comment %}
+                                        {% if order_field == 'all_users' and order_by == '-' %}
+                                        <a href="?group_id={{ group.id }}&page={{page_obj.number}}&order_field=all_users&order_by=&keywords={{keywords}}">Member Phone Number (Z-A)</a>
+                                        {% elif order_field == 'all_users' %}
+                                        <a href="?group_id={{ group.id }}&page={{page_obj.number}}&order_field=all_users&order_by=-&keywords={{keywords}}">Member Phone Number (A-Z)</a>
+                                        {% else %}
+                                        <a href="?group_id={{ group.id }}&page={{page_obj.number}}&order_field=all_users&order_by=-&keywords={{keywords}}">Member Phone Number</a>
+                                        {% endif %}
+                                    {% endcomment %}
+                                Member Phone Number
+                                </th>
+                                <th aria-label="First Name: activate to sort column by descending order" aria-controls="group-table" tabindex="0" class="sorting info">First Name</th>
+                                <th aria-label="Last Name: activate to sort column by descending order" aria-controls="group-table" tabindex="0" class="sorting info">Last Name</th>
+                                <th aria-label="Organization: activate to sort column by descending order" aria-controls="group-table" tabindex="0" class="sorting info">Organization</th>
+                                <th aria-label="Role: activate to sort column by descending order" aria-controls="group-table" tabindex="0" class="sorting info">Role</th>
+                                <th aria-label="Subscribed: activate to sort column by descending order" aria-controls="group-table" tabindex="0" class="sorting info">Subscribed For Texts</th>
+                                <th aria-label="Actions" aria-controls="group-table" tabindex="0" class="sorting info">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for person in all_users %}
+                        <tr role="row">
+                                <td>
+                                    <a href="{% url 'accounts:user_profile' %}?username={{ person.user.username }}"> {{ person.get_formatted_phone_number }} </a>
+                                </td>
+                                <td>{{ person.user.first_name }}</td>
+                                <td>{{ person.user.last_name }}</td>
+                                <td>{{ person.school.name }}</td>
+                                <td>{% if person.role %}{{ person.get_role_display }}{% else %}Advisor{% endif %}</td>
+                                <td>{% if person.halt%} No {% else %} Yes {% endif %}</td>
+                                <td>
+                                    <a href="{% url 'organizations:remove_person' %}?group_id={{ group.id }}&user_id={{ person.user.id }}"> Remove From Group </a>
+                                </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+			</div>
+		</div>
+
+		<br>
+		<h3> Select members from organizations to be added to the group above:</h3>
+		<form method="post">
+			{% csrf_token %}
+			{{ form.as_p }}
+			<b>Select Organizations:</b><br>
+			<select id="schools" style="width: 600px">
+				<option value="">--------</option>
+				{% for school in schools %}
+					<option value="{{ school.id }}">{{ school.name }}</option>
+				{% endfor %}
+			</select>
+			<br><br>
+
+			<b>Select Members Below (Use Ctrl or Shift to select multiple):</b><br>
+			<select id="members" multiple="multiple" size="10" style="width: 600px">
+			</select>
+
+			<div class="page-btns">
+				<input type="submit" id="create-group" class="btn btn-primary" value="Add Selected Members to the Group Above">
+			</div>
+		</form>
+	</div>
+
+<style>
+.page-btns{
+	text-align: left;
+	margin-bottom: 30px;
+}
+</style>
+
+<script src="{% static 'js/list_members_by_school.js' %}"></script>
+<script>
+	// Intercept and add the numbers into hidden value	
+	$("form").submit(function() {
+		var nums = [];
+		$( "#members option:selected" ).each(function() {
+			nums.push($(this).val());
+		});
+		$('#id_phone_numbers').val(nums.join(','));
+
+		return true;
+	});
+
+    $(document).ready( function () {
+        $('#group-table').dataTable({
+            "dom": 'T<"clear">lfrtip',
+            "tableTools": {
+                "sSwfPath": "http://cdn.datatables.net/tabletools/2.2.4/swf/copy_csv_xls_pdf.swf"
+            },
+            responsive: true
+        });
+    });
+</script>
+{% endblock %}

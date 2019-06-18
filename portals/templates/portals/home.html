@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block title %} Home page {% endblock %}
+
+{% block content %}	
+<div class="page-header">
+  <h1>Home Page Of T4S</h1>
+	{% if user.is_authenticated %}
+		<p> You're already logged in. Use the dropdown menus above to create conversations, manage groups and organizations.</p>
+	{% else %}
+		<p> Please log in by clicking on the button in the top right corner.</p>
+        <p> Here, we hope to have some introductory video about what Text4Strength system does in the future.</p>
+	{% endif %}
+  
+</div>
+
+{% endblock %}

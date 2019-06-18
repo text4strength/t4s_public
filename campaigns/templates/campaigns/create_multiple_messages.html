@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block title %} Create Multiple Message Conversation {% endblock %}
+{% block extrajs %}
+    <script src="{% static 'autocomplete/autocomplete-0.3.0.min.js' %}"></script>
+    <script src="{% static 'underscore/underscore-min.js' %}"></script>
+    <script src="{% static 'backbone/backbone-min.js' %}"></script>
+    <script src="{% static 'backgrid/backgrid.min.js' %}"></script>
+
+    <script>
+    // widget.setValue(['apple']);
+
+    // variable for auto complete box
+        var existing_groups = [];
+
+    // variables for backgrid
+        var default_options = [];  // globals
+        var row_count = 0; // used in backgrid.js, so define this early on
+
+        {% if cur_msg %}
+            {% for group in cur_msg.groups.all %}
+                var group_name = '{{ group.name }}';
+                existing_groups.push([group_name]); // Autcomplete accepts in [['G1'],['G2']...]
+            {% endfor %}
+
+            {% for option in cur_msg.options.all %}
+                {% if option.exclude_in_msg %}
+                    var checkboxVal1 = true;
+                {% else %}
+                    var checkboxVal1 = false;
+                {% endif %}
+
+                {% if option.notify %}
+                    var checkboxVal2 = true;
+                {% else %}
+                    var checkboxVal2 = false;
+                {% endif %}
+
+                {% if option.wizard %}
+                    var checkboxVal3 = true;
+                {% else %}
+                    var checkboxVal3 = false;
+                {% endif %}
+
+                default_options.push({
+                    'id': '{{ option.id }}',
+                    'child_msg_id': '{{ option.child_msg.id }}',
+                    'keyword': $('<span>').html('{{ option.trigger_keyword }}').text(),
+                    'separator': $('<span>').html('{{ option.separator }}').text(),
+                    'option_text': $('<span>').html("{{ option.option_content}}").text(),
+                    'reply': $('<span>').html("{{ option.child_msg.content }}").text(),
+                    'exclude_option_text': checkboxVal1,
+                    'notify': checkboxVal2,
+                    'wizard': checkboxVal3,
+{#                    'our-response': $('<span>').html("{{ option.child_msg.content }}").text(),#}
+                    });
+                row_count += 1;
+            {% endfor %}
+        {% endif %}
+    </script>
+    <script src="{% static 'js/backgrid.js' %}"></script>
+    <script src="{% static 'js/common.js' %}"></script>
+{% endblock %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'autocomplete/autocomplete-0.3.0.min.css' %}" type="text/css"/>
+    <link rel="stylesheet" href="{% static 'backgrid/backgrid.min.css' %}" type="text/css"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'css/create_mm.css' %}" type="text/css"/>
+{% endblock %}
+
+{% block content %}
+	<ol class="breadcrumb">
+		<li><a href="/">Home</a></li>
+		<li><a href="{% url 'campaigns:list' %}">Manage and Send Conversations</a></li>
+		<li class="active">Create Multiple Message Conversation</li>
+		<a style="float:right" class="help" target="_blank" href="#" data-toggle="tooltip" data-placement="top" title="Click here to see the instruction video.">
+			<span class="glyphicon glyphicon-question-sign"></span>
+		</a>
+	</ol>
+
+	<div id="container">
+		<form method="post">
+			{% csrf_token %}
+
+            {% if campaign %}
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title"> <strong>Conversation Title: </strong>{{ campaign.title }}</h3>
+                        <input type="hidden" name="title" size="160" value="{{ campaign.title }}"/>
+                    </div>
+                </div>
+            {% else %}
+                <p><b> Step 1: Give this conversation a name</b> (You'll use this to find it later.)</p>
+                <p></p><b> Conversation Title:</b></p>
+                <input name="title" type="text" size="157">
+                {{ form.title.errors }}
+                <br><br><br>
+            {% endif %}
+
+			<p><b> Step 2: Compose the prompting message to start the conversation.</b></p>
+			<textarea class="form-control" name="cur_msg" placeholder="Type your prompting message here" rows="2" cols="50">{{ cur_msg.content }}</textarea>
+			{{ form.cur_msg.errors }}
+
+			<div class="jumbotron">
+                <h4><b>Message will look like this when you send it:</b></h4><br>
+				<div class="msg-preview">
+					 <span id="cur-msg"></span><br><br>
+				</div>
+				<div class="char-left-label">
+					<b>Characters Remaining (160 max.):</b> <span class="char-left"></span><br>
+				</div>
+			</div>
+
+			<p><b> Step 3: Compose the keywords allowed as response, what follows after them, and what you'd like to reply if the user choose that option (all THREE required).</b>
+            <br>
+                <span id="note" style='color:#D43F3A'><b>Note: </b>Avoid lower/uppercased keywords that start with <b>'halt'</b>, <b>'resume'</b>, <b>'contact'</b>, <b>'back'</b>, <b>'help'</b>, <b>'aid'</b>, <b>'tutorial'</b> and <b>'frequency'</b> because they are reserved for the system.</span>
+            </p>
+{#				<p> 1) If you enter an asterik &#42; as keyword, user can reply anything she wants (i.e. in addition to the other keywords you set up), we'll respond them with the corresponding reply you defined below.#}
+{#                    In other words, &#42; can also be used to capture ANYTHING OTHER THAN the keywords you defined.#}
+{#                    ; using that feature, you can also send notification texts to organizers, or queue the user for wizard chat if her reply does not match the keywords you set up.#}
+{#                </p>#}
+{#                <p> 2) In order to link an option with another (existing) message, you must first create (and save) that option. This is because in order to link messages, we must create an option object to link the parent and child messages in the database.#}
+{#                    So, enter some random words like "dummy" in "Our Reply Back" column for desired keyword/option, click "Save Current Options(s)" and then you can click on "Link existing message to follow" action.#}
+{#                </p>#}
+
+			<div id="backgrid-table" class="backgrid-container">
+			</div>
+
+			<div class="grid-btns">
+				<button class="btn btn-success" id="add-row-btn" type="button"> <span class="glyphicon glyphicon-plus"></span>Add New Option</button>
+				<button class="btn btn-primary" id="save-btn" type="button">Save Current Option(s)</button>
+			</div>
+
+{#			<p><b> Step 4 (optional): If you checked "Notify" for any of the option(s) above, you can search and add group(s) that you want to send a text alert/notification to EVERY TIME EACH recipient's text response matches the keyword.</b><br>#}
+{#			<span id="note" style='color:#D43F3A'> <b>Note: </b>Before saving the message, ALWAYS make sure to double check the entries below because EVERYONE in the groups listed below will receive text alerts for EVERY SINGLE response that matches from individual responders.</span>#}
+{#            </p>#}
+			<p><b> Step 4 (optional): Add group(s) that you'd like to notify when user responds to the messages marked above.</b>
+            </p>
+
+            <div id="group_ids"></div>
+			<br>
+
+			<div class="page-btns">
+				{% if parent_msg %}
+					<button id="back-btn" class="btn btn-primary" type="button">
+						<span class="glyphicon glyphicon-backward"></span><br>Back to parent (previous) message </button>
+				{% endif %}
+				<button id="done-btn" class="btn btn-primary" type="button"><span class="glyphicon glyphicon-forward"></span><br>Done for now.</button>
+			</div>
+		</form>
+	</div>
+
+<script>
+var group_names;
+var group_ids;
+var groups = {};
+var widget;
+
+$.ajax({
+    url : "{% url 'campaigns:list_all_groups' %}",
+    type : 'GET',
+    async : true,
+    success : function(data) {
+        if (data.result == 'success'){
+            group_ids = data.group_ids;
+            group_names = data.group_names;
+
+            group_names.forEach(function (key, index) {
+                groups[key] = group_ids[index];
+            });
+            // Auto complete stuff begins
+            //var url = 'conversations/create_conversation/'
+            var autocomplete_config = {
+              placeholderHTML: "Type and search the group names you'd like to send the text notification/alerts here",
+              lists: {
+                names: group_names
+              }
+            };
+            widget = new AutoComplete('group_ids', autocomplete_config);
+            widget.setValue(existing_groups); // set existing groups
+        }else{
+            alert("Error happened in posting Message option data to server. Please try refreshing the page and if the error persist, contact the site maintainers.");
+        }
+    }
+}); // auto complete AJAX call ends here
+
+
+function raise_warning_if_empty(str, warning_msg){
+	if (str.length == 0){
+		alert(warning_msg);
+	}
+}
+
+// This is here because we cannot use Django tag in js file separate from the template (html) file
+// they are used in backgrid.js file
+var add_option_url = '{% url "campaigns:create_multiple_msg_conv" %}';
+{#{% if cam_id and msg_id %}#}
+{#var link_msg_url = "{% url 'campaigns:link_message_list' %}?cam_id={{ cam_id }}&msg_id={{ msg_id }}";#}
+{#{% else %}#}
+var link_msg_url = '{% url "campaigns:link_message_list" %}';
+{#{% endif %}#}
+
+var CHAR_LIMIT = 160;
+function update_char_left(cur_msg){
+	var $char_left = $('.char-left');
+	var char_remaining = CHAR_LIMIT - cur_msg.length;
+
+	$char_left.text(char_remaining);
+
+	if (char_remaining < 0){
+		$('.char-left').addClass('warning');
+	}
+	else{
+		$('.char-left').removeClass('warning');
+	}
+}
+
+function update_live_msg(){
+	var msg = '';
+	msg += $('textarea[name="cur_msg"]').val(); // message from Step 2's textbox
+
+	var data = grid.collection.toJSON();
+	for (var i=0; i < data.length; i++) {
+        if (!data[i]['exclude_option_text']) {
+            if (data[i]['keyword'] == '*') {
+                // CAUTION: Do NOT remove space before trigger keyword here
+                msg += ' ' + data[i]['separator'] + data[i]['option_text'];
+            }
+            else {
+                // CAUTION: Do NOT remove space before trigger keyword here
+                msg += ' ' + data[i]['keyword'] + data[i]['separator'] + data[i]['option_text'];
+            }
+        }
+	}
+
+	$('#cur-msg').text(msg);
+	update_char_left(msg);
+}
+
+function isMessageOverCharLimit(msg){
+    return msg.length > CHAR_LIMIT;
+}
+
+function getSelectedGroupNames(){
+    var selected_group_names = [];
+    widget.getValue().forEach(function (key, index) {selected_group_names.push(key[0].value)});
+    return selected_group_names;
+}
+
+function getSelectedGroupIds(){
+    var selected_group_ids = []; // group_name => group_id
+    getSelectedGroupNames().forEach(function (group_name, index) {
+        selected_group_ids.push(groups[group_name]);
+    });
+    return selected_group_ids;
+}
+
+function getNumOfSelectedGroup(){
+    return widget.getValue().length;
+}
+
+function submit(next_url, msg_id, option_id){
+	var title = $('input[name="title"]').val();
+	if (title.length == 0){
+		alert("Please enter conversation title.");
+		return;
+	}
+
+	var msg_content = $('textarea[name="cur_msg"]').val();
+	if (msg_content.length == 0){
+		alert("Please enter prompting message.");
+		return;
+	}
+
+	// Check if option content: is empty, or some necessary info is missing
+	var data = grid.collection.toJSON();
+
+	if (data.length == 0){
+		error_msg = "You have not created any option. If you plan to not have any option, we recommend you to create 'Single Message Conversation'. Otherwise, please add row(s) in the table for Step 3 and enter option(s).";
+		alert(error_msg);
+		return;
+	}
+
+	for (var i=0; i < data.length; i++) {
+		if (!(data[i]['keyword'] && data[i]['reply'])){ // data[i]['option_text'] can be blank; the other two MUST not be empty
+			 alert("You must enter content for both 'KEYWORD' AND 'Our reply back' columns in each row. Or you should remove the corresponding option row.");
+			 return;
+		}
+
+        if (data[i]['notify'] && (getNumOfSelectedGroup() == 0)){
+            alert("You've selected to be sent notification/alerts, but have NOT entered which groups we should send notifications to. Please enter group names in Step 4.");
+            return;
+        }
+	}
+
+    // We'll measure message length by what's in the Preview box because user
+    // can choose to not use OPTION/KEYWORDS as part of the message to be sent
+    var preview_msg = $('#cur-msg').text();
+    var user_ok_with_msg_length = true;
+	if (isMessageOverCharLimit(preview_msg)){
+        user_ok_with_msg_length = false;
+		warning_msg = "Seems like the message you created is longer than " + CHAR_LIMIT
+                    + "character limit. If you're okay with this being sent as two separate messages, answer OK."
+                    +" Otherwise, answer CANCEL and modify your message to fit within the character limit.";
+        if (confirm(warning_msg)){
+            user_ok_with_msg_length = true;
+        }
+    }
+
+	var data_str = JSON.stringify(data); // everything in the option table is in this variable
+    var selected_gp_names = JSON.stringify(getSelectedGroupNames());
+    var selected_gp_ids = JSON.stringify(getSelectedGroupIds());
+
+    if (user_ok_with_msg_length){
+        $.ajax({
+            url : "{% url 'campaigns:create_multiple_msg_conv' %}?cam_id={{ cam_id }}&msg_id= {{ msg_id }}",
+            type : 'POST',
+            dataType : "json",
+            // data_str contains option table stuff; msg_content contains prompting message content
+            data: {options : data_str, cur_msg: msg_content, title: title,
+                    selected_group_names: selected_gp_names, selected_group_ids: selected_gp_ids},
+            success : function(data) {
+                if (data.result == 'success'){
+                    if (msg_id){
+                        location.href = next_url + '?cam_id=' + data.cam_id + '&msg_id=' + msg_id + '&option_id=' + option_id;
+                    }else{
+                        location.href = next_url + '?cam_id=' + data.cam_id + '&msg_id=' + data.cur_msg_id + '&option_id=' + option_id;
+                    }
+
+                }else{
+                    alert("Error happened in posting Message option data to server. If this keeps happening, contact website admin.");
+                }
+            },
+            error: function(xhr, textStatus, errorThrown){
+               console.log('Request failed: ' + xhr.responseText);
+            }
+        });
+    }
+}// end of submit()
+
+var row_height = 138; // empirically measured in Chrome; this row_height is partially affected by .continue-btn {height: 120px; } in static/create_mm.css
+var header_height;
+
+function update_grid_height(){
+	new_height = header_height + (row_height * row_count);
+	$('#backgrid-table').height(new_height);
+}
+
+$(document).ready(function(){
+	header_height = $('#backgrid-table tr').height();
+	update_grid_height();
+
+	$('#done-btn').click(function(){
+		submit('{% url "campaigns:list" %}');
+	});
+
+	$('#save-btn').click(function(){
+		submit('{% url "campaigns:create_multiple_msg_conv" %}');
+	});
+
+	$('#back-btn').click(function(){
+		submit('{% url "campaigns:create_multiple_msg_conv" %}', '{{ parent_msg.id }}');
+	});
+
+	$('#add-row-btn').on('click', function(event){
+		row_count++;
+		update_grid_height();
+		grid.insertRow([{keyword: "", separator: '', option_text: "", reply: ""}]);
+	});
+
+	// For live message preview
+	update_live_msg();
+	$('textarea[name="cur_msg"]').keyup(update_live_msg);
+
+	// Ref: http://stackoverflow.com/questions/12279236/backbone-js-collection-events
+	grid.collection.on("change reset add remove", update_live_msg, grid);
+
+});
+</script>
+{% endblock %}

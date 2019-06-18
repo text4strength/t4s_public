@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block title %} Manage Organizations {% endblock %}
+{% block extrajs %}
+<script src="{% static 'js/common.js' %}"></script>
+{% endblock %}
+{% block extracss %}
+<link rel="stylesheet" href="{% static 'css/group.css' %}" type="text/css"/>
+{% endblock %}
+{% block content %}
+	<ol class="breadcrumb">
+		<li><a href="/">Home</a></li>
+		<li class="active">Manage Organizations</li>
+		<a style="float:right" class="help" target="_blank" href="#" data-toggle="tooltip" data-placement="top" title="Click here to see the instruction video.">
+			<span class="glyphicon glyphicon-question-sign"></span>
+		</a>
+	</ol>
+
+	<div id="container">
+		<div class="panel panel-primary">
+			<div class="panel-heading">
+				<h3 class="panel-title">List of Organizations</h3>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table table-bordered table-hover">
+					<tr>
+							<th style="width:35%;">
+                                {% if order_field == 'name' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=name&order_by=&keywords={{keywords}}">Organization Name (Z-A)</a>
+								{% elif order_field == 'name' %}
+								<a href="?page={{page_obj.number}}&order_field=name&order_by=-&keywords={{keywords}}">Organization Name (A-Z)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=name&order_by=-&keywords={{keywords}}">Organization Name</a>
+								{% endif %}
+                            </th>
+							<th>Date Created</th>
+							<th>Actions </th>
+					</tr>
+					{% for school in object_list %}
+					<tr>
+							<td>
+								{{ school.name}}
+							</td>
+							<td>{{ school.created_at}}</td>
+							<td>
+								<a href="{% url 'organizations:list_student' %}?school_id={{ school.id }}"> List/Add members </a><span> | </span>
+								<a href="{% url 'organizations:list_advisor' %}?school_id={{ school.id }}"> List/Add organizers </a><span> | </span>
+								<a href="{% url 'organizations:edit_school' school.id %}"> Edit Organization Name </a><span> | </span><br>
+								<a href="{% url 'organizations:edit_contact' school.id %}"> Edit AID reply message and emergency contact info</a>
+							</td>
+					</tr>
+					{% endfor %}
+				</table>
+			</div>
+		</div>
+    {% comment %}
+		{% include "pagination.html" %}
+    {% endcomment %}
+	</div>
+	<span id="note"><b>Note:</b> 'Remove Organization' is NOT allowed because that will destroy conversation records of the students/recipients in the database. </span>
+{% endblock %}

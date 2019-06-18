@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+{% load set_rand_var %}
+
+{% block title %} View Sent and Pending Conversations {% endblock %}
+{% block extracss %}
+	<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/tabletools/2.2.4/css/dataTables.tableTools.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/common.css' %}">
+{% endblock %}
+{% block extrajs %}
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+    <script src="{% static 'js/common.js' %}"></script>
+{% endblock %}
+
+{% block content %}	
+	<ol class="breadcrumb">
+		<li><a href="/">Home</a></li>
+		<li><a href="{% url 'campaigns:list' %}">Manage and Send Conversations</a></li>
+		<li class="active">View Sent and Pending Conversations</li>
+		<a style="float:right" class="help" target="_blank" href="#" data-toggle="tooltip" data-placement="top" title="Click here to see the instruction video.">
+			<span class="glyphicon glyphicon-question-sign"></span>
+		</a>
+	</ol>
+
+		<form method="get" class="form-inline pull-right" role="form">
+			<b>Filter Results by: </b>
+			<div class="form-group">
+			    <label class="sr-only">Group</label>
+			    <select name="group">
+			    	<option value="all-group" > Group - All </option>
+			    	{% for g in groups %}
+			    		{% if g.id|upper == group %}
+			    		<option value="{{ g.id }}" selected="selected"> {{ g.name }}</option>
+			    		{% else %}
+			    		<option value="{{ g.id }}"> {{ g.name }}</option>
+			    		{% endif %}
+			    	{% endfor %}
+			    </select>
+			  </div>
+			  <div class="form-group">
+			    <label class="sr-only">Status</label>
+			    <select name='status'>
+			    	<option value="all-status" > Status - All </option>
+			    	{% for st  in statuses %}
+			    		{% if st.0 == status %}
+			    		<option value="{{ st.0 }}" selected="selected"> {{ st.1 }}</option>
+			    		{% else %}
+			    		<option value="{{ st.0 }}"> {{ st.1 }}</option>
+			    		{% endif %}
+			    	{% endfor %}
+			    </select>
+			  </div>
+			  <button type="submit" class="btn btn-default btn-primary">Filter Results</button>
+		</form>
+		<br><br>
+
+	<div id="container">
+		<div class="panel panel-primary" style="border-color: white;">
+			<div class="panel-heading">
+				<h3 class="panel-title">List of Conversations Sent or Pending</h3>
+			</div>
+            <div class="alert alert-info" role="alert">
+                <strong>Note: </strong>The download feature usually works best with Firefox browser.<br>
+                "Failed" means one more more messages failed in sending; check the email notification(s) at "text4strength.dev@gmail.com" for more detail.
+            </div>
+
+			<div class="table-responsive">
+				<table aria-describedby="taskq_table_info" role="grid" id="taskq-table" class="table table-bordered dataTable hover">
+                    <thead>
+    					<tr role="row">
+							<th aria-label="Conversation Title: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+                                Conversation Title
+                            </th>
+							<th aria-label="Queued By: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+                                Queued By
+                            </th>
+							<th aria-label="Date Created: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+								{% if order_field == 'created_at' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=">Date Created <br>(most recent first)</a>
+								{% elif order_field == 'created_at' %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=-">Date Created <br>(oldest first)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=-">Date Created</a>
+								{% endif %}
+                            </th>
+							<th aria-label="Launch Date and Time: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+								{% if order_field == 'launch_time' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=launch_time&order_by=">Launch Date/Time <br>(most recent first)</a>
+								{% elif order_field == 'launch_time' %}
+								<a href="?page={{page_obj.number}}&order_field=launch_time&order_by=-">Launch Date/Time <br>(oldest first)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=launch_time&order_by=-">Launch Date/Time</a>
+								{% endif %}
+                            </th>
+							<th aria-label="Send FROM: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+                                Send FROM
+                            </th>
+                            <th aria-label="Groups (Sent TO): activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+                                Groups <br>(Sent TO)
+                            </th>
+							<th aria-label="Status: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+								{% if order_field == 'status' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=status&order_by=">Status <br>(Z-A)</a>
+								{% elif order_field == 'status' %}
+								<a href="?page={{page_obj.number}}&order_field=status&order_by=-">Status <br>(A-Z)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=status&order_by=-">Status</a>
+								{% endif %}
+                            </th>
+							<th aria-label="Actions: activate to sort column by descending order" aria-controls="taskq-table" tabindex="0" class="info">
+                                Actions
+                            </th>
+    					</tr>
+                    </thead>
+                    <tbody>
+                        {% for taskq in object_list %}
+                        <tr role="row">
+                            <td title="{{ taskq.campaign.root_message.get_full_content }}">
+                                <div class='panel-group' id='accordion'>
+                                    {% set_rand_var randnum = 1000 %}
+                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapse-{{ taskq.campaign.id }}-{{ randnum }}">
+                                        {{ taskq.campaign.title}}<span class="caret"></span>
+                                    </a>
+                                    <div id="collapse-{{ taskq.campaign.id }}-{{ randnum }}" class="panel-collapse collapse">
+                                        <div class="panel-body">{{ taskq.campaign.root_message.get_full_content }}</div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>{{ taskq.created_by.username }}</td>
+                            <td>{{ taskq.created_at}}</td>
+                            <td>{{ taskq.launch_time}}</td>
+                            <td>{{ taskq.twilio.name}} <br> ({{ taskq.twilio.get_formatted_phone_number }})</td>
+                            <td>
+                                {% for group in taskq.groups.all %}
+                                    <a href="{% url 'organizations:edit_group_member' %}?group_id={{ group.id }}" >{{ group.name }}</a>,<br>
+                                {% endfor %}
+                            </td>
+                            <td>{{ taskq.status}}</td>
+                            <td>
+                                <a href="{% url 'smsmessages:taskq_conversation' %}?taskq_id={{ taskq.id }}"> Show Responses from Members for this Launch </a><span> | </span>
+                                <br>
+                                <a href="{% url 'campaigns:delete_taskq' %}?taskq_id={{ taskq.id }}" onclick="if(!confirm('Are you sure you want to remove/cancel this conversation launch?')) return false;">
+                                    Remove/Cancel this Conversation Launch</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+				</table>
+			</div>
+		</div>
+    {% comment %}
+		{% include "pagination.html" %}
+    {% endcomment %}
+	</div>
+
+<script>
+    $(document).ready( function () {
+        $('#taskq-table').dataTable({
+            "columns": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ],
+
+            "dom": 'T<"clear">lfrtip',
+            "bSort": false, // to turn off default sorting
+            "tableTools": {
+                "sSwfPath": "http://cdn.datatables.net/tabletools/2.2.4/swf/copy_csv_xls_pdf.swf"
+            },
+            responsive: true
+        });
+    });
+</script>
+{% endblock %}

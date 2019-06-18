@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block title %} {{ person.user.username }}'s Profile {% endblock %}
+
+{% block content %}
+    <h3>Update Account Settings for => {{ person.user.username }}</h3>
+    <ul>
+    {% if person.user == user %}
+        <li><a href="{% url 'accounts:change_password' %}"> Change Password </a><br></li>
+    {% endif %}
+    <li><a href="{% url 'accounts:update_conversation_limit' %}?username={{ person.user.username }}"> Update {{ person.user.username }}'s Daily Conversation (Text Message) Limit </a></li>
+    {% if person.user == user %}
+        <li><a href="{% url 'accounts:list_twilio_account' %}?username={{ person.user.username }}"> View/Add/Edit {{ person.user.username }}'s Twilio Accounts </a></li>
+        <li><a href="{% url 'accounts:update_time_limit' %}?username={{ person.user.username }}"> Update WHEN we send messages </a></li>
+    {% endif %}
+    </ul>
+    <br>
+    {% if person.user.is_staff %}
+        <span style="color:red"><b>NOTE:</b> As a superuser/staff, you should note that the account creation (sign up) process <br>
+            uses Twilio account information that could be different from what you prescribe above. <br>
+            That Twilio account information is as follows: </span><br>
+        <ul>
+          <li>Twilio Number: {{ twilio_num }}</li>
+          <li>Twilio SID: {{ twilio_sid }}</li>
+          <li>Twilio Token: {{ twilio_token }}</li>
+        </ul>
+        <p>
+        If the above Twilio account info are old, please contact the developer to update them in the system.
+        </p>
+    {% endif %}
+    <h3>Is this user ({{ person.user.username }}) subscribed to receive texts from T4S system?</h3>
+    <ul>
+    <li>
+    {%  if person.halt %}
+        NO
+    {% else %}
+        YES
+    {% endif %}
+    </li>
+    </ul>
+    <h3>Review for => {{ person.user.username }}</h3>
+    <ul>
+    <li>
+        <a href="{% url 'smsmessages:view_conversation' %}?username={{ person.user.username }}"> View {{ person.user.username }}'s Conversation History </a>
+    </li>
+    </ul>
+{% endblock %}

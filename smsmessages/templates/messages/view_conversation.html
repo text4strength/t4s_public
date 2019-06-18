@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+{% block extracss %}
+	<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/tabletools/2.2.4/css/dataTables.tableTools.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/common.css' %}">
+{% endblock %}
+{% block extrajs %}
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+{% endblock %}
+
+{% block title %} Conversation with the Member with Phone Number: {{ phone_number }} {% endblock %}
+
+{% block content %}
+	<div id="container" width="100%">
+        <div class="col-sm-12 table-responsive">
+            <div class="alert alert-info" role="alert"><strong>Note: </strong>The download feature usually works best with Firefox browser.</div>
+            <table id="conv-log" class="display" role="grid" aria-describedby="conv_log_info" cellspacing="0" width="100%" style="table-layout:fixed;word-wrap:break-word;">
+                <thead>
+                    <tr role="row">
+                        <th aria-label="From Phone Number" aria-controls="conv-log" tabindex="0" >From</th>
+                        <th aria-label="To Phone Number" aria-controls="conv-log" >To</th>
+                        <th aria-label="Time Sent/Received" aria-controls="conv-log">Time Sent/Received</th>
+                        <th aria-label="Response: activate to sort column ascending" aria-controls="conv-log">Text Message Content</th>
+                        <th aria-label="Response: activate to sort column ascending" aria-controls="conv-log">Campaign</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in records %}
+                    <tr class="{% if forloop.counter|divisibleby:2 %}even{% else %}odd{% endif %}" role="row">
+                        <td>{{ r.sender_num }}</td>
+                        <td>{{ r.receiver_num }}</td>
+                        <td>{{ r.created_at }}</td>
+                        <td>
+                            {% if r.status == 'give up' %}
+                                (Failed to send)
+                            {% endif %}
+                            {{ r.content }}
+                        </td>
+                        <td>
+                            {{ r.campaign.title }}
+                        </td>
+                    </tr>
+    			{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="text-center">
+            <a id="chat" class="btn-lg btn-primary" style="display:inline-block; margin-top: 20px;"
+               href="{% url 'wizard:regular_chat' %}?username={{ phone_number }}"
+               target="_blank">Chat with the Participant
+            </a>
+        </div>
+    <br>
+	</div>
+
+    <script>
+    $(document).ready( function () {
+    $('#conv-log').dataTable({
+        "dom": 'T<"clear">lfrtip',
+        "autoWidth": false,
+        "bSort": false,
+{#        "sScrollX": "100%", // Fixed autoWidth problem by following a comment at: https://www.datatables.net/forums/discussion/1117/column-width#}
+{#        "bScrollCollapse": true, // which suggests to add "table-layout:fixed;word-wrap:break-word;" to <table>#}
+{#        "sScrollXInner": "200%",#}
+{#        "bAutoWidth": false,#}
+        "columns": [
+            {"width": "15%", "orderable": false, "bSortable": false},
+            {"width": "15%", "orderable": false, "bSortable": false},
+            {"width": "20%", "orderable": false, "bSortable": false},
+            {"width": "500px","orderable": false, "bSortable": false},
+            {"width": "200px","orderable": false, "bSortable": false},
+        ],
+        "pageLength": -1,
+        "lengthMenu": [[-1, 10, 25, 50], ["All", 10, 25, 50]],
+        "tableTools": {
+            "sSwfPath": "http://cdn.datatables.net/tabletools/2.2.4/swf/copy_csv_xls_pdf.swf"
+        },
+        responsive: true
+        });
+    });
+    </script>
+{% endblock %}

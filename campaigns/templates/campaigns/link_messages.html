@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block extracss %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/common.css' %}">
+    <style>
+    .page-btns{
+        text-align: center;
+        margin: 20px 0px 20px 0px;
+    }
+
+    .page-btns input{
+        font-size: 18px;
+    }
+    </style>
+{% endblock %}
+
+{% block title %} Link with Existing Message {% endblock %}
+
+{% block content %}	
+	<div id="container">
+		<ol class="breadcrumb">
+		  <li><a href="/">Home</a></li>
+		  <li><a href="{% url 'campaigns:create_multiple_msg_conv' %}?cam_id={{ cam_id }}&msg_id={{ msg_id }}"> Create Multiple Message Conversation </a></li>
+          <li class="active">Link with Existing Message</li>
+		</ol>
+
+		<form action="?page={{page_obj.number}}&order_field={{ order_field }}&order_by={{ order_by }}&cam_id={{ cam_id }}&&msg_id={{ msg_id }}">
+		  <div class="col-lg-6 pull-right">
+		    <div class="input-group">
+		      <input type="text" class="form-control" value="{{ keywords }}" placeholder="Type Some Words in the Message You're Looking for Here" name="keywords">
+		      <input type="hidden" class="form-control" value="{{ cam_id }}" name="cam_id">
+		      <input type="hidden" class="form-control" value="{{ msg_id }}" name="msg_id">
+                <span class="input-group-btn">
+		        <button class="btn btn-default btn-primary" type="submit">Search</button>
+		      </span>
+		    </div>
+		  </div>
+		</form>
+		<br><br><br>
+
+        <div class="alert alert-info" role="alert"><strong>Note: </strong>Be VERY VERY careful of creating circular references among conversations/messages. It will keep the user in an infinite and repetitive loop of conversation.
+            We suggest you to draw your conversation in a diagram and make sure there's no circular reference(s) before connecting messages here.<br>
+            How would you know if there's a circular reference? In that case, when you try to view the conversation with circular reference, the server will return an error,
+            but you won't see it because in production version of the site, we do not show error messages to public for security reason.
+            As a regular user, you'll likely see a generic server error like 500 Internal Server Error.</div>
+        <h4>
+            <b>Existing/Current Message: </b><span id="cur-msg">"{{ cur_msg.get_full_content }}"</span>
+        </h4>
+		<div id="messages" class="panel panel-primary">
+			<div class="panel-heading">
+				<h3 class="panel-title">List of Potential Messages For Replacement </h3>
+			</div>
+
+			<div class="table-responsive">
+				<table class="table table-bordered table-hover table-condensed">
+					<tr>
+							<th style="width:470px;">
+								{% if order_field == 'content' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=content&order_by=&keywords={{keywords}}">Message Content(Z-A)</a>
+								{% elif order_field == 'title' %}
+								<a href="?page={{page_obj.number}}&order_field=content&order_by=-&keywords={{keywords}}">Message Content(A-Z)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=content&order_by=-&keywords={{keywords}}">Message Content</a>
+								{% endif %}
+                            </th>
+							<th style="width:200px;">
+								Campaign Title
+                            </th>
+							<th>Created By</th>
+							<th>
+								{% if order_field == 'created_at' and order_by == '-' %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=&keywords={{keywords}}">Date Created (Latest First)</a>
+								{% elif order_field == 'created_at' %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=-&keywords={{keywords}}">Date Created (Oldest First)</a>
+								{% else %}
+								<a href="?page={{page_obj.number}}&order_field=created_at&order_by=-&keywords={{keywords}}">Date Created</a>
+								{% endif %}
+								</th>
+							<th>Actions</th>
+					</tr>
+					{% for msg in object_list %}
+					<tr>
+							<td title="{{ msg.content }}">
+                                {{ msg.get_full_content }}
+							</td>
+							<td>
+                                {{ msg.campaign.title|default:"N/A" }}
+                            </td>
+							<td>{{ msg.composer}}</td>
+							<td>{{ msg.created_at}}</td>
+							<td>
+								<a href="{% url 'campaigns:link_messages' %}?parent_msg_id={{ parent_msg_id }}&child_msg_id={{ msg.id }}&option_id={{ option_id }}&cam_id={{ cam_id }}">
+                                    Replace the existing message (listed above the table) with this message
+                                </a>
+							</td>
+					</tr>
+					{% endfor %}
+				</table>
+			</div>
+		</div>
+		{% include "pagination.html" %}
+	</div>
+    <script>
+
+    // we don't need that anymore because we used hidden input in the search field to carry
+    // cam_id and msg_id above; just keeping this function for future reference sake
+    function setCurMessageTitleIfDjangoContextDoesNotProvideThat(){
+        var cur_msg_cache = "{{ cur_msg.get_full_content }}";
+
+        if (cur_msg_cache) {
+            localStorage.setItem('cur_msg', cur_msg_cache);
+        }
+        if ($('#cur-msg').text() == '""'){
+            $('#cur-msg').text('"'+localStorage.getItem('cur_msg')+'"');
+        }
+        return;
+    }
+
+    $(document).ready( function () {
+        //setCurMessageTitleIfDjangoContextDoesNotProvideThat();
+    });
+
+    </script>
+
+{% endblock %}

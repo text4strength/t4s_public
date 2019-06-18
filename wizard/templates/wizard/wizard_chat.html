@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+{% block extracss %}
+	<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/tabletools/2.2.4/css/dataTables.tableTools.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/common.css' %}">
+    <style>
+    .responder{
+     }
+    .sender{
+        background-color: #c9e2b3;
+        margin-bottom: 10px;
+        margin-top: 10px;
+    }
+    .responder-info, .sender-info{
+        float: left;
+        width: 330px;
+        word-wrap: break-word;
+    }
+    .page-btns{
+        float: left;
+        margin-top: 5px;
+    }
+    .centered {
+        margin: 0 auto;
+        text-align: left;
+        width: 300px;
+    }
+    textarea{
+        width: 100%;
+    }
+    #done-btn {
+        font-size: 18px;
+        width: 300px;
+        height: 110px;
+        white-space: normal;
+        margin-bottom: 50px;
+
+        -webkit-border-radius:30px/24px;
+        -moz-border-radius:30px/24px;
+        border-radius:30px/24px;
+    }
+    .char-left-label{
+        float: right;
+    }
+    </style>
+{% endblock %}
+
+{% block extrajs %}
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.7/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/tabletools/2.2.4/js/dataTables.tableTools.min.js"></script>
+    <script>
+    var taskq_id;
+    var key;
+    var wizard_recipient_first_name;
+    var chat_records = {}; // keep track of which chats have been shown
+    </script>
+{% endblock %}
+
+{% block title %}
+    {% if not show_all_history %} Wizard {% endif %}
+    Chat with &quot;{{ wizard_obj.recipient.first_name }} {{ wizard_obj.recipient.last_name }}&quot; ({{ phone_number }})
+    {% if not show_all_history %}
+      for conversation titled: {{ campaign_title }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+	<div id="container">
+		<ol class="breadcrumb">
+		  <li><a href="/">Home</a></li>
+		  <li><a href="{% url 'wizard:list_wizard' %}">Manage Wizard Table</a></li>
+		  <li class="active">
+              {% if not show_all_history %} Wizard {% endif %}
+                Chat with &quot;{{ wizard_obj.recipient.first_name }} {{ wizard_obj.recipient.last_name }}&quot; ({{ phone_number }})
+              {% if not show_all_history %}
+                  for conversation titled: {{ campaign_title }}
+              {% endif %}
+          </li>
+			<a style="float:right" class="help" target="_blank" href="#" data-toggle="tooltip" data-placement="top" title="Click here to see the instruction video.">
+				<span class="glyphicon glyphicon-question-sign"></span>
+			</a>
+		</ol>
+
+		<div class="panel panel-primary" style="border-color: white;">
+			<div class="panel-heading">
+				<h3 class="panel-title">
+                {% if not show_all_history %} Wizard {% endif %}
+                Chat with &quot;{{ wizard_obj.recipient.first_name }} {{ wizard_obj.recipient.last_name }}&quot; ({{ phone_number }})
+                {% if not show_all_history %}
+                    for conversation titled: {{ campaign_title }}
+                {% endif %}
+                </h3>
+			</div>
+            <div class="alert alert-info" role="alert"><strong>Note: </strong>We update chat window every 30-60 secs. Please don't panic if new messages don't show up as soon as you entered in the chat box below.</div>
+        </div>
+
+        <div id="chats" style="width: 100%; height: 400px; overflow-y: scroll;">
+            {% for record in records %}
+                <script>
+                    taskq_id = {{ record.task_queue.id }}; // we'll remember the most recent taskq_id because that's relevant
+                    key = "{{ record.twilio_msg_sid }}";
+                    chat_records[key] = true;
+                    wizard_recipient_first_name = "{{ wizard_obj.recipient.first_name }}";
+                </script>
+                {% with p1=record.sender_num  p2=wizard_obj.recipient.username%}
+{# if sender == wizobj.recipient, then it's student responding #}
+{#                        <p class="triangle-border {% ifequal p1|stringformat:"s" p2 %}left{% else %}right{% endifequal %}">#}
+{#                        <div class="{% ifequal p1|stringformat:"s" p2 %}sender{% else %}responder{% endifequal %}">#}
+                    {% ifequal p1|stringformat:"s" p2 %}
+                        <div class="sender"> <span class="sender-info">{{ wizard_obj.recipient.first_name|default:phone_number }} [{{ record.created_at }}]:::::</span>
+                            {{ record.content}}
+                        </div>
+                    {% else %}
+                        <div class="responder"> <span class="responder-info">{{ record.sender_num }} [{{ record.created_at }}]:::::</span>
+                            {{ record.content}}
+                        </div>
+                    {% endifequal %}
+                {% endwith %}
+            {% endfor %}
+        </div>
+
+        <p>
+            <form method="POST">
+                {% csrf_token %}
+{#                <label for="msg">Type your response below (it'll show up in the above window as we periodically#}
+{#                     fetch data from the server, which takes on average ~30-60 secs):</label>#}
+                <label for="msg">Type your response below:</label>
+                <textarea cols="160" id="msg" name="msg" rows="3"></textarea>
+                <br>
+                <div class="page-btns">
+                    <input type="submit" class="btn btn-primary" value="Send Message" onClick="writeMessage(); return false;">
+                </div>
+				<div class="char-left-label">
+					<b>Characters Remaining (160 max.):</b> <span class="char-left"></span><br>
+				</div>
+            </form>
+        </p>
+        {% if not wizard_obj.status %}
+            <br><br>
+            <div class="centered">
+                <a id="done-btn" class="btn btn-success" href="{% url 'wizard:switch_status' %}?wizard_id={{ wizard_obj.id }}">
+                    <span class="glyphicon glyphicon-remove"></span><br>
+                    Done chatting? Click here [to close this chat/wizard case&#42;]
+                </a>
+            </div>
+            <span style="color:red;">
+                    &#42; Why this button? You can simply choose to close the browser tab.
+                    BUT as long as you don't close this conversation (either here or in the Wizard Table),
+                    any future message from the recipient will still be queued as part of wizard conversation.
+                    In other words, the message will not be read by the computer to reply with automated sequence.
+                    So, if you'd like the user to be put back into future automated converastions, it's a GOOD PRACTICE
+                    to always close the case after you finish chatting. You can always reopen the case later if you need to.
+            </span>
+        {% endif %}
+    </div>
+    <script>
+
+        // Data we need for sending message
+        var recipient_num = "{{ wizard_obj.recipient }}";    // passed in from views.py
+        var cam_id = {{ campaign_id }};             // passed in from views.py
+
+        // We need following params in send_sms(....)
+        //send_sms(client, msg_content, to_num, from_num, campaign=None, task_queue=None, root_msg=None, record_msg=True):
+        var data = {
+            'taskq_id': taskq_id,  // to find twilio client info 'taskq_obj.twilio'
+            'msg': '',
+            'to_num': recipient_num,   // assume we only talk to one student at a time (no group chat)
+            //'from_num': ,     // we'll figure this out via twilio object
+            'campaign_id': cam_id
+        };
+
+        // Miscellaneous stuff like character count and such
+        var CHAR_LIMIT = 160;
+
+        function update_char_left(cur_msg){
+            var $char_left = $('.char-left');
+            var char_remaining = CHAR_LIMIT - cur_msg.length;
+
+            $char_left.text(char_remaining);
+
+            if (char_remaining < 0){
+                $('.char-left').addClass('warning');
+            }
+            else{
+                $('.char-left').removeClass('warning');
+            }
+        }
+
+        function isMessageOverCharLimit(msg){
+            return msg.length > CHAR_LIMIT;
+        }
+
+        function update_live_msg(){
+            var msg = '';
+            msg += $('textarea[name="msg"]').val(); // message from Step 2's textbox
+
+            $('#msg').text(msg);
+            update_char_left(msg);
+        }
+
+        function resetTextBoxMessage(){ // refreshes/empties the sent message from input box
+            var empty_msg = '';
+            $('textarea[name="msg"]').val(empty_msg);
+            update_char_left(empty_msg);
+        }
+
+        function showSuccessAsPlaceholder(){
+            $('textarea[name="msg"]').attr('placeholder','Message sent successfully. Type here to send more.')
+        }
+
+        function writeMessage(){
+            var msg = $('textarea[name="msg"]').val();
+
+            // We'll measure message length by what's in the Preview box because user
+            // can choose to not use OPTION/KEYWORDS as part of the message to be sent
+            var user_ok_with_msg_length = true;
+            if (isMessageOverCharLimit(msg)){
+                user_ok_with_msg_length = false;
+                warning_msg = "Seems like the message you created is longer than " + CHAR_LIMIT
+                            + "character limit. If you're okay with this POSSIBLY (Twilio and receiving phone carrier "
+                            + "decide this) being sent as two separate messages, answer OK."
+                            +" Otherwise, answer CANCEL and modify your message to fit within the character limit.";
+                if (confirm(warning_msg)){
+                    user_ok_with_msg_length = true;
+                }
+            }
+
+            if (msg.length == 0){
+                alert("You must type something to send the message.");
+            }
+            else{
+                sendMessage(msg, user_ok_with_msg_length);
+            }
+        }
+
+        function sendMessage(msg_str, msg_length_ok) {
+            data['msg'] = msg_str || data['msg'];
+            var data_str = JSON.stringify(data);
+
+            if (msg_length_ok){
+                $.ajax({
+                    url : "{% url 'wizard:wizard_chat' %}?wizard_id={{ wizard_obj.id }}",
+                    type : 'POST',
+                    dataType : "json",
+                    data: {data_str : data_str},
+                    success : function(data) {
+                        if (data.result == 'success'){
+                            resetTextBoxMessage();
+                            showSuccessAsPlaceholder();
+                            console.log('Message successfully sent.');
+                            return true;
+                        }else{
+                            alert("Error happened in posting message data to server. Try resending it, but if this keeps happening, contact the site admin.");
+                        }
+                    },
+                    error: function(xhr, textStatus, errorThrown){
+                        alert("Error happened in posting message data to server. Try resending it, but if this keeps happening, contact the site admin.");
+                        console.log('Request failed: ' + xhr.responseText);
+                    }
+                });
+
+                return false;
+            }
+        }
+
+        // Ensure the lastest chat entry is in focus in the chat window
+        function scrollToChatWindowBottom(){
+            var chatDiv = document.getElementById("chats");
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        function addNewChatLine(name, time_str, msg, is_recipient){
+            var cls_name = is_recipient ? 'sender' : 'responder'; // assign class name
+            var html_str = '<div class="'+cls_name+'"><span class="'+cls_name+'-info">';
+            html_str += name + ' [' + time_str + "]:::::<\/span>" + msg + "<\/div>";
+            $('#chats').append(html_str);
+        }
+
+        var cr; // chat_records
+        // REF: http://stackoverflow.com/questions/5052543/how-to-fire-ajax-request-periodically
+        (function worker() {
+          $.ajax({
+            url: "{% url 'wizard:wizard_chat_records' %}?wizard_id={{ wizard_obj.id }}",
+            success: function(data) {
+                var twilio_key;
+                var sender_num;
+                var time_str;
+                var msg;
+                var is_recipient;
+                var name;
+
+                cr = JSON.parse(data['records']);
+                for (var i=0; i<cr.length; i++){
+                    twilio_key = cr[i].fields.twilio_msg_sid;
+                    sender_num = cr[i].fields.sender_num;
+                    msg = cr[i].fields.content;
+                    time_str = new Date(cr[i].fields.created_at);
+                    time_str = time_str.toLocaleString(); //"8/01/2015, 5:49:21 PM" closest we can get to what's parsed by Django: Aug. 1, 2015, 5:49 p.m
+                    is_recipient = (recipient_num == sender_num) ? true : false; // to determine the class for the chat <div>
+
+                    if (is_recipient){ // we try to assign first name to the recipient's label if possible
+                        // if recipient first name is not empty or is 'N/A', we will assign it a value
+                        if (!((wizard_recipient_first_name.length==0) || (wizard_recipient_first_name=='N/A'))){
+                            console.log(wizard_recipient_first_name);
+                            name = wizard_recipient_first_name;
+                        }
+                    }
+                    else{
+                        name = sender_num; // otherwise, we use phone number as name
+                    }
+
+                    // IMPORTANT: we verify if an incoming message is new or old by checking its twilio_key
+                    // This, as far as I know, is the most reliable way to distinguish new from old messages.
+                    if (!chat_records[twilio_key]){ // twilio key is "SmsSid=SM1e32223a5cb934498c5bf0dd138ffb138dsafds32" in the URL sent back by Twilio
+                        console.log(name + '[' + time_str + ']' + '::: ' + msg);
+                        chat_records[twilio_key] = true; // first remember that this is seen
+                        addNewChatLine(name, time_str, msg, is_recipient);
+                        scrollToChatWindowBottom();
+                    }
+                }
+                //console.log(data);
+            },
+            error: function(xhr, textStatus, errorThrown){
+                console.log('Request failed: ' + xhr.responseText);
+            },
+            complete: function() {
+              // Schedule the next request when the current one's complete
+              setTimeout(worker, 10000);//30000);
+            }
+          });
+        })();
+
+        $(document).ready( function () {
+            scrollToChatWindowBottom();
+
+            // To keep track of number of characters typed
+            update_live_msg();
+            $('textarea[name="msg"]').keyup(update_live_msg);
+
+        });
+    </script>
+{% endblock %}
+

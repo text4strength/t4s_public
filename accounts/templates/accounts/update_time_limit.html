@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+{% block title %} Update Time Limit {% endblock %}
+{% block extrajs %}
+<script src="{% static 'js/common.js' %}"></script>
+<script src="{% static 'bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js' %}"></script>
+{% endblock %}
+{% block extracss %}
+<link rel="stylesheet" href="{% static 'css/group.css' %}" type="text/css"/>
+<link href="{% static 'bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}	
+	<ol class="breadcrumb">
+		<li><a href="/">Home</a></li>
+		<li><a href="{% url 'accounts:user_profile'%}?username={{ username }}">User Profile Settings</a></li>
+		<li class="active">Update Time Limit</li>
+		<a style="float:right" class="help" target="_blank" href="#" data-toggle="tooltip" data-placement="top" title="Click here to see the instruction video.">
+			<span class="glyphicon glyphicon-question-sign"></span>
+		</a>
+	</ol>{{ name }} <!-- DO NOT revmove this tag. This is an exmaple of having a global constant. I'll use this later in refactoring-->
+
+    <p>
+        <b>
+        Enter the time during which we CAN send messages to recipients (in 0-23 hour format).<br>
+        </b>
+        For example, entering '7:15' and '23:20' in the boxes below will only allow messages to be sent between 7:15AM and 11:20PM.<br>
+    </p>
+
+    <!--TODO: I thought about using Bootstrap datepicker, but I don't have time for prettifying things now-->
+    <!--div class="input-group date form_datetime col-md-4" data-date-format="HH:ii p" data-link-field="dtp_input1">
+        <input class="form-control" size="16" type="text" value="" readonly>
+        <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+        <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+    </div>
+    <input type="hidden" id="dtp_input1" name="launch_datetime" value="" required/><br/-->
+
+	<div class="container">
+		<form method="post">
+			{% csrf_token %}
+			<p>
+			{% for field in form %}
+                {{ field.errors }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}({{ field.help_text }}):</label>
+                <br />
+                {{ field }}<br /><br />
+			{% endfor %}
+			</p>
+            <input class="btn btn-primary done-btn" type="submit" value="Update Time Limit">
+		</form>
+	</div>
+
+    <style></style>
+{% endblock %}
